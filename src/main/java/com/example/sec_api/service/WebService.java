@@ -51,15 +51,14 @@ public class WebService {
         );
         return response.getBody();
     }
-/*
+
     public String fetchNasdaqData(String url) {
     ResponseEntity<String> response = restTemplate.exchange(
             url,
             HttpMethod.GET,
             entity,
-            new ParameterizedTypeReference<Map<Integer, Map<String, String>>>() {}
+            String.class
     );
     return response.getBody();
     }
-*/
 }

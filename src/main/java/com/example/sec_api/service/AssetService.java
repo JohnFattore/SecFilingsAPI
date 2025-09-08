@@ -18,15 +18,14 @@ public class AssetService {
         return assetRepository.save(asset);
     }
         
-    public Asset createOrUpdateAsset(Long cik) {
-        return assetRepository.findByCik(cik)
-            .map(asset -> {
+    public Asset createOrUpdateAsset(Asset asset) {
+        return assetRepository.findByCik(asset.getCik())
+            .map(existing -> {
                 // update fields if needed
-                return assetRepository.save(asset);
+                existing.setIsFund(asset.getIsFund());
+                return assetRepository.save(existing);
             })
             .orElseGet(() -> {
-                Asset asset = new Asset();
-                asset.setCik(cik);
                 return assetRepository.save(asset);
             });
     }

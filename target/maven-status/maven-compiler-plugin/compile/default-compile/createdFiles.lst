@@ -11,3 +11,4 @@ com/example/sec_api/service/WebService.class
 com/example/sec_api/repository/ListingRepository.class
 com/example/sec_api/model/Listing.class
 com/example/sec_api/repository/AssetRepository.class
+com/example/sec_api/util/QuarterUtils.class

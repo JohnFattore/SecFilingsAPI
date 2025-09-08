@@ -23,18 +23,13 @@ public class QuarterService {
         return quarterRepository.save(quarter);
     }
     
-    public Quarter createQuarter(long cik, LocalDate periodEnd, Long netIncomeLoss) {
-        Asset asset = assetRepository.findByCik(cik).orElseThrow(() -> new RuntimeException("Asset not found"));
-        return quarterRepository.findByAssetAndPeriodEnd(asset, periodEnd)
-        .map(quarter -> {
-            // update fields if needed
-            return quarterRepository.save(quarter);
+    public Quarter createOrUpdateQuarter(Quarter quarter) {
+        return quarterRepository.findByAssetAndPeriodEnd(quarter.getAsset(), quarter.getPeriodEnd())
+        .map(existing -> {
+            existing.setNetIncomeLoss(quarter.getNetIncomeLoss());
+            return quarterRepository.save(existing);
         })
         .orElseGet(() -> {
-            Quarter quarter = new Quarter();
-            quarter.setAsset(asset);
-            quarter.setPeriodEnd(periodEnd);
-            quarter.setNetIncomeLoss(netIncomeLoss);
             return quarterRepository.save(quarter);
         });
     }

@@ -10,3 +10,4 @@
 /home/spike/Documents/GitHub/SecFilingsAPI/src/main/java/com/example/sec_api/service/ListingService.java
 /home/spike/Documents/GitHub/SecFilingsAPI/src/main/java/com/example/sec_api/service/QuarterService.java
 /home/spike/Documents/GitHub/SecFilingsAPI/src/main/java/com/example/sec_api/service/WebService.java
+/home/spike/Documents/GitHub/SecFilingsAPI/src/main/java/com/example/sec_api/util/QuarterUtils.java

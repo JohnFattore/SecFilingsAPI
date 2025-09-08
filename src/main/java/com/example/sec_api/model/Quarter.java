@@ -11,10 +11,8 @@ public class Quarter {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column()
     private LocalDate periodEnd;
 
-    @Column()
     private Long netIncomeLoss;
 
     @ManyToOne
