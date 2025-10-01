@@ -37,7 +37,7 @@ public class QuarterUtils {
     public static LocalDate parseQuarter(String quarterStr) {
         String yearPart = quarterStr.substring(2, 6);
         int year = Integer.parseInt(yearPart);
-        int q = Integer.parseInt(quarterStr.substring(7));
+        int q = Integer.parseInt(quarterStr.substring(7, 8));
 
         int month;
         int day;

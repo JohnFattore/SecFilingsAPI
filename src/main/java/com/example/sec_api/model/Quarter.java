@@ -15,6 +15,8 @@ public class Quarter {
 
     private Long netIncomeLoss;
 
+    private Long revenue;
+
     @ManyToOne
     @JoinColumn(name = "asset_id")
     private Asset asset;    
@@ -28,6 +30,9 @@ public class Quarter {
 
     public Long getNetIncomeLoss() { return netIncomeLoss; }
     public void setNetIncomeLoss(Long netIncomeLoss) { this.netIncomeLoss = netIncomeLoss; }
+
+    public Long getRevenue() { return revenue; }
+    public void setRevenue(Long revenue) { this.revenue = revenue; }
 
     public Asset getAsset() { return asset; }
     public void setAsset(Asset asset) { this.asset = asset; }
