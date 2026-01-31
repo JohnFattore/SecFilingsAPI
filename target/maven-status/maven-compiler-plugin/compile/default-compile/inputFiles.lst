@@ -1,5 +1,5 @@
 /home/spike/Documents/GitHub/SecFilingsAPI/src/main/java/com/example/sec_api/SecApiApplication.java
-/home/spike/Documents/GitHub/SecFilingsAPI/src/main/java/com/example/sec_api/controller/HelloController.java
+/home/spike/Documents/GitHub/SecFilingsAPI/src/main/java/com/example/sec_api/controller/MainController.java
 /home/spike/Documents/GitHub/SecFilingsAPI/src/main/java/com/example/sec_api/model/Asset.java
 /home/spike/Documents/GitHub/SecFilingsAPI/src/main/java/com/example/sec_api/model/Listing.java
 /home/spike/Documents/GitHub/SecFilingsAPI/src/main/java/com/example/sec_api/model/Quarter.java

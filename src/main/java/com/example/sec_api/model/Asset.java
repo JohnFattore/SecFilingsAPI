@@ -18,7 +18,6 @@ public class Asset {
     @OneToMany(mappedBy = "asset")
     private List<Listing> listings;
 
-    // --- getters and setters ---
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
 

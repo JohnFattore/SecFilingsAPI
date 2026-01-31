@@ -8,6 +8,11 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.ResponseEntity;
 import org.springframework.core.ParameterizedTypeReference;
+import java.io.BufferedReader;
+import java.io.InputStreamReader;
+import java.nio.charset.StandardCharsets;
+import org.springframework.core.io.ClassPathResource;
+import java.util.stream.Collectors;
 
 @Service
 public class WebService {
@@ -61,4 +66,22 @@ public class WebService {
     );
     return response.getBody();
     }
+
+    public List<String> getSnP500List() {
+        try (BufferedReader reader = new BufferedReader(
+                new InputStreamReader(
+                        new ClassPathResource("constituents.csv").getInputStream(),
+                        StandardCharsets.UTF_8
+                ))) {
+                return reader.lines()
+                        .map(line -> line.split(",", -1)[0]) // first column (ticker)
+                        .filter(ticker -> !ticker.equals("Symbol")) // optional: skip header
+                        .filter(ticker -> !ticker.isBlank())
+                        .collect(Collectors.toList());
+        }
+         catch (Exception e) {
+            throw new RuntimeException("Failed to load S&P 500 list", e);
+        }
+    }
 }
+

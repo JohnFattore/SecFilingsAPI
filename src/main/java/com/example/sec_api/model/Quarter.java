@@ -11,11 +11,26 @@ public class Quarter {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    private LocalDate periodEnd;
+    private LocalDate periodEnd; // quarterEnd;
 
     private Long netIncomeLoss;
 
     private Long revenue;
+    /*
+     
+    private LocalDate filingDate;
+
+    private LocalDate periodFrom;
+
+    private LocalDate periodTo;
+
+    private Long sharesOutstanding; //
+
+    private Long earningsPerShareBasic; //EarningsPerShareBasic
+
+    private long earningsPerShareDiluted; //EarningsPerShareDiluted
+
+     */
 
     @ManyToOne
     @JoinColumn(name = "asset_id")

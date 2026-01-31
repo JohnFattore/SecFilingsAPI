@@ -1,4 +1,3 @@
-com/example/sec_api/controller/HelloController.class
 com/example/sec_api/model/Asset.class
 com/example/sec_api/repository/QuarterRepository.class
 com/example/sec_api/SecApiApplication.class
@@ -9,6 +8,7 @@ com/example/sec_api/service/AssetService.class
 com/example/sec_api/service/WebService$1.class
 com/example/sec_api/service/WebService.class
 com/example/sec_api/repository/ListingRepository.class
+com/example/sec_api/controller/MainController.class
 com/example/sec_api/model/Listing.class
 com/example/sec_api/repository/AssetRepository.class
 com/example/sec_api/util/QuarterUtils.class

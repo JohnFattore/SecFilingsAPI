@@ -25,7 +25,7 @@ import static com.example.sec_api.util.QuarterUtils.*;
 import java.util.stream.Collectors;
 
 @RestController
-public class HelloController {
+public class MainController {
 
     private final WebService webService;
     private final AssetService assetService;
@@ -36,7 +36,7 @@ public class HelloController {
     private final QuarterRepository quarterRepository;
     private final ObjectMapper mapper = new ObjectMapper();
 
-    public HelloController(WebService webService, AssetService assetService, AssetRepository assetRepository, ListingService listingService, ListingRepository listingRepository, QuarterService quarterService, QuarterRepository quarterRepository) {
+    public MainController(WebService webService, AssetService assetService, AssetRepository assetRepository, ListingService listingService, ListingRepository listingRepository, QuarterService quarterService, QuarterRepository quarterRepository) {
         this.webService = webService;
         this.assetService = assetService;
         this.assetRepository = assetRepository;
@@ -113,7 +113,6 @@ public class HelloController {
     public ResponseEntity quarters(@RequestParam String ticker) {
         Asset asset = assetRepository.findByListings_Ticker(ticker);
         List<Quarter> quarters = quarterRepository.findByAsset(asset);
-        System.out.println(quarters);
         if (asset == null) {
             return ResponseEntity.notFound().build();
         }
@@ -132,6 +131,12 @@ public class HelloController {
         return ResponseEntity.ok(response);
     }
 
+    @GetMapping("/test2")
+    public ResponseEntity test2() throws Exception {
+        webService.getSnP500List();
+        return ResponseEntity.ok("MAXWELL");
+    }
+
     @GetMapping("/company-fact-sheet")
     public ResponseEntity companyFactSheet(@RequestParam String ticker) {
         Asset asset = assetRepository.findByListings_Ticker(ticker);
@@ -141,28 +146,77 @@ public class HelloController {
         List<Quarter> quarters = quarterRepository.findByAsset(asset);
         quarters.sort(Comparator.comparing(Quarter::getPeriodEnd).reversed());
         double ttmNetIncome = 0.0;
+        double ttmRevenue = 0.0;
         int counter = 0;
         for (Quarter q: quarters) {
             if (counter >= 4) {
                 break;
             }
             ttmNetIncome += q.getNetIncomeLoss();
+            ttmRevenue += q.getRevenue();
             counter += 1;
         }
 
         Map<String, Object> response = Map.of(
             "ticker", ticker,
             "cik", asset.getCik().toString(),
-            "ttmNetIncome", String.format("%.2f",ttmNetIncome)
+            "ttmNetIncome", String.format("%.2f",ttmNetIncome),
+            "ttmRevenue", String.format("%.2f",ttmRevenue)
         );
         return ResponseEntity.ok(response);
     }
 
+    @GetMapping("/admin/quarters")
+    public String financials() throws Exception {
+        List<Asset> assets = assetRepository.findByIsFund(false);
+        //.stream()
+        //.filter(asset -> asset.getCik() == 320193L) // AAPL
+        //.collect(Collectors.toList());
+        List<String> snp500Tickers = webService.getSnP500List();
+        System.out.println(snp500Tickers);
+        List<String> errors = new ArrayList<String>();
+        for (Asset asset : assets) {
+            List<Listing> listings = listingRepository.findByAsset(asset);
+            boolean inSnP500 = false;
+            for (Listing l : listings) {
+                if (snp500Tickers.contains(l.getTicker())) {
+                    inSnP500 = true;
+                }
+            }
+            System.out.println(inSnP500);
+            if (inSnP500) {
+                Long cik = asset.getCik();
+                try {
+                    String json = null;
+                    json = webService.fetchFinancials(cik);
+                    JsonNode root = mapper.readTree(json);
+
+                    String[] accountingConcepts = {"NetIncomeLoss", "RevenueFromContractWithCustomerExcludingAssessedTax"};
+                    Map<LocalDate, Map<String, Long>> quarterData = getQuarterlyFacts(accountingConcepts, root);
+
+                    for (Map.Entry<LocalDate, Map<String, Long>> q : quarterData.entrySet()) {
+                        Map<String, Long> facts = q.getValue();
+                        Quarter quarter = new Quarter();
+                        quarter.setAsset(asset);
+                        quarter.setPeriodEnd(q.getKey());
+                        quarter.setNetIncomeLoss(facts.get("NetIncomeLoss"));
+                        quarter.setRevenue(facts.get("RevenueFromContractWithCustomerExcludingAssessedTax"));
+                        quarterService.createOrUpdateQuarter(quarter);
+                    }
+                }
+                catch (Exception e) {
+                    errors.add("cik:" + cik.toString() + " error: " + e.getMessage());
+                }
+            }
+        }
+        return String.join("\n", errors) + "Maxwell";
+    }   
+
+    // private functions
     private Map<LocalDate, Map<String, Long>> getQuarterlyFacts(String[] facts, JsonNode root) {
         Map<LocalDate, Map<String, Long>> quarterData = new HashMap<>();
         for (String fact : facts) {
-            JsonNode factsNode = null;
-            factsNode = root.get("facts").get("us-gaap").get(fact).get("units").get("USD");
+            JsonNode factsNode = root.get("facts").get("us-gaap").get(fact).get("units").get("USD");
             Map<LocalDate, Long> quarters = new HashMap<>();
             Map<Integer, Long> years = new HashMap<>();
 
@@ -177,12 +231,11 @@ public class HelloController {
                     }
                 }
             }
-
             // check to ensure quarters is not empty
             if (!quarters.isEmpty()) {
                 // fill in missing quarters, mainly those with 10-K not 10-Q
                 LocalDate period = Collections.min(quarters.keySet());
-                LocalDate lastPeriod = LocalDate.of(2025, 9, 30);
+                LocalDate lastPeriod = LocalDate.of(2025, 12, 31);
                 while (period.isBefore(lastPeriod)) {
                     if (quarters.get(period) == null) {
                         Long quarterFact = years.get(period.getYear());
@@ -211,38 +264,5 @@ public class HelloController {
         }
         return quarterData;
     }
-
-    @GetMapping("/admin/quarters")
-    public String financials() throws Exception {
-        List<Asset> assets = assetRepository.findByIsFund(false)    
-        .stream()
-        .filter(asset -> 789019L == asset.getCik())
-        .collect(Collectors.toList());
-        List<String> errors = new ArrayList<String>();
-        for (Asset asset : assets) {
-            Long cik = asset.getCik();
-            try {
-                String json = null;
-                json = webService.fetchFinancials(cik);
-                JsonNode root = mapper.readTree(json);
-
-                String[] accountingConcepts = {"NetIncomeLoss", "RevenueFromContractWithCustomerExcludingAssessedTax"};
-                Map<LocalDate, Map<String, Long>> quarterData = getQuarterlyFacts(accountingConcepts, root);
-
-                for (Map.Entry<LocalDate, Map<String, Long>> q : quarterData.entrySet()) {
-                    Map<String, Long> facts = q.getValue();
-                    Quarter quarter = new Quarter();
-                    quarter.setAsset(asset);
-                    quarter.setPeriodEnd(q.getKey());
-                    quarter.setNetIncomeLoss(facts.get("NetIncomeLoss"));
-                    quarter.setRevenue(facts.get("RevenueFromContractWithCustomerExcludingAssessedTax"));
-                    quarterService.createOrUpdateQuarter(quarter);
-                }
-            }
-            catch (Exception e) {
-                errors.add("cik:" + cik.toString() + " error: " + e.getMessage());
-            }
-        }
-        return "Maxwell";//String.join("\n", errors);
-    }   
 }
+
