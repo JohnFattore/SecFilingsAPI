@@ -8,6 +8,7 @@ import java.time.LocalDate;
 import java.util.Optional;
 
 public interface QuarterRepository extends JpaRepository<Quarter, Long> {
-    Optional<Quarter> findByAssetAndPeriodEnd(Asset asset, LocalDate periodEnd);
+    Optional<Quarter> findByAssetAndPeriodStartAndPeriodEnd(Asset asset, LocalDate periodStart, LocalDate periodEnd);
+
     List<Quarter> findByAsset(Asset asset);
 }

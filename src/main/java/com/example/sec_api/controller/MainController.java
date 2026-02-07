@@ -8,21 +8,15 @@ import com.example.sec_api.model.Asset;
 import com.example.sec_api.repository.AssetRepository;
 import com.example.sec_api.service.AssetService;
 import com.example.sec_api.model.Listing;
-import com.example.sec_api.repository.ListingRepository;
 import com.example.sec_api.service.ListingService;
 import com.example.sec_api.model.Quarter;
 import com.example.sec_api.repository.QuarterRepository;
-import com.example.sec_api.service.QuarterService;
+import com.example.sec_api.service.EdgarService;
+import com.example.sec_api.service.FinancialService;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import java.time.LocalDate;
-import com.fasterxml.jackson.databind.MappingIterator;
-import com.fasterxml.jackson.dataformat.csv.CsvMapper;
-import com.fasterxml.jackson.dataformat.csv.CsvSchema;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.http.ResponseEntity;
-import static com.example.sec_api.util.QuarterUtils.*;
-import java.util.stream.Collectors;
 
 @RestController
 public class MainController {
@@ -31,26 +25,29 @@ public class MainController {
     private final AssetService assetService;
     private final AssetRepository assetRepository;
     private final ListingService listingService;
-    private final ListingRepository listingRepository;
-    private final QuarterService quarterService;
     private final QuarterRepository quarterRepository;
+    private final EdgarService edgarService;
+    private final FinancialService financialService;
     private final ObjectMapper mapper = new ObjectMapper();
 
-    public MainController(WebService webService, AssetService assetService, AssetRepository assetRepository, ListingService listingService, ListingRepository listingRepository, QuarterService quarterService, QuarterRepository quarterRepository) {
+    public MainController(WebService webService, AssetService assetService, AssetRepository assetRepository,
+            ListingService listingService,
+            QuarterRepository quarterRepository,
+            EdgarService edgarService, FinancialService financialService) {
         this.webService = webService;
         this.assetService = assetService;
         this.assetRepository = assetRepository;
         this.listingService = listingService;
-        this.listingRepository = listingRepository;
-        this.quarterService = quarterService;
         this.quarterRepository = quarterRepository;
+        this.edgarService = edgarService;
+        this.financialService = financialService;
     }
 
     @GetMapping("/admin/load")
     public String load() {
         // create dictionary mapping tickers to fund type (equity or fund)
         // nasdaq list first, then others
-        Map<String, Boolean> tickerToType = new HashMap();
+        Map<String, Boolean> tickerToType = new HashMap<>();
         String csv = webService.fetchNasdaqData("https://www.nasdaqtrader.com/dynamic/symdir/nasdaqlisted.txt");
         String[] rows = csv.split("\\r?\\n");
         for (String row : rows) {
@@ -77,11 +74,17 @@ public class MainController {
             }
         }
 
+        List<String> snp500Tickers = webService.getSnP500List();
+        Set<String> snp500Set = new HashSet<>(snp500Tickers);
+
         Map<Integer, Map<String, String>> secTickers = webService.fetchSecTickers();
-        //assetRepository.deleteAll();
+        // assetRepository.deleteAll();
         for (Map<String, String> secTicker : secTickers.values()) {
-            Asset asset = new Asset();
             String ticker = secTicker.get("ticker");
+            if (!snp500Set.contains(ticker)) {
+                continue;
+            }
+            Asset asset = new Asset();
             asset.setCik(Long.parseLong(secTicker.get("cik_str")));
             Boolean isFund = tickerToType.get(ticker);
             if (isFund == null) {
@@ -95,17 +98,18 @@ public class MainController {
             listing.setAsset(asset);
             listingService.createOrUpdateListing(listing);
         }
-        return tickerToType.toString();
+        return "S&P 500 Loaded: " + snp500Set.size() + " tickers processed.";
     }
 
     @GetMapping("/admin/test")
-    public String test() throws Exception{
+    public String test() throws Exception {
         String json = null;
         Long cik = 320193L;
         json = webService.fetchFinancials(cik);
         JsonNode root = mapper.readTree(json);
         JsonNode facts = null;
-        facts = root.get("facts").get("us-gaap").get("RevenueFromContractWithCustomerExcludingAssessedTax").get("units").get("USD");
+        facts = root.get("facts").get("us-gaap").get("RevenueFromContractWithCustomerExcludingAssessedTax").get("units")
+                .get("USD");
         return facts.toString();
     }
 
@@ -117,17 +121,16 @@ public class MainController {
             return ResponseEntity.notFound().build();
         }
         List<Map<String, Object>> quarterOutput = new ArrayList<>();
-        for (Quarter q: quarters) {
+        for (Quarter q : quarters) {
             Map<String, Object> quarterMap = new HashMap<>();
             quarterMap.put("periodEnd", q.getPeriodEnd());
             quarterMap.put("netIncome", q.getNetIncomeLoss());
             quarterOutput.add(quarterMap);
         }
         Map<String, Object> response = Map.of(
-            "ticker", ticker,
-            "cik", asset.getCik().toString(),
-            "quarters", quarterOutput
-        );
+                "ticker", ticker,
+                "cik", asset.getCik().toString(),
+                "quarters", quarterOutput);
         return ResponseEntity.ok(response);
     }
 
@@ -144,125 +147,79 @@ public class MainController {
             return ResponseEntity.notFound().build();
         }
         List<Quarter> quarters = quarterRepository.findByAsset(asset);
-        quarters.sort(Comparator.comparing(Quarter::getPeriodEnd).reversed());
-        double ttmNetIncome = 0.0;
-        double ttmRevenue = 0.0;
-        int counter = 0;
-        for (Quarter q: quarters) {
-            if (counter >= 4) {
-                break;
+        Map<String, Object> metrics = financialService.calculateMetrics(quarters);
+
+        Map<String, Object> response = new HashMap<>();
+        response.put("ticker", ticker);
+        response.put("cik", asset.getCik().toString());
+
+        if (!metrics.isEmpty()) {
+            response.put("ttmNetIncome", formatNumber(metrics.get("ttmNetIncome")));
+            response.put("ttmRevenue", formatNumber(metrics.get("ttmRevenue")));
+            response.put("ttmOperatingCashFlow", formatNumber(metrics.get("ttmOperatingCashFlow")));
+            response.put("ttmOperatingIncome", formatNumber(metrics.get("ttmOperatingIncome")));
+            response.put("ttmGrossProfit", formatNumber(metrics.get("ttmGrossProfit")));
+            response.put("ttmCostOfRevenue", formatNumber(metrics.get("ttmCostOfRevenue")));
+
+            response.put("ttmNetIncomeYoY", formatPercent(metrics.get("ttmNetIncomeYoY")));
+            response.put("ttmRevenueYoY", formatPercent(metrics.get("ttmRevenueYoY")));
+
+            // Balance Sheet
+            response.put("latestAssets", formatNumber(metrics.get("latestAssets")));
+            response.put("latestLiabilities", formatNumber(metrics.get("latestLiabilities")));
+            response.put("latestEquity", formatNumber(metrics.get("latestEquity")));
+            response.put("latestLongTermDebt", formatNumber(metrics.get("latestLongTermDebt")));
+            response.put("latestInventory", formatNumber(metrics.get("latestInventory")));
+            response.put("latestCash", formatNumber(metrics.get("latestCash")));
+            response.put("latestShares", formatNumber(metrics.get("latestShares")));
+            response.put("latestEps", formatNumber(metrics.get("latestEps")));
+
+            // Ratios
+            response.put("netMargin", formatPercent(metrics.get("netMargin")));
+            response.put("grossMargin", formatPercent(metrics.get("grossMargin")));
+            response.put("debtToAssets", formatPercent(metrics.get("debtToAssets")));
+            response.put("cashToLiabilities", formatPercent(metrics.get("cashToLiabilities")));
+            response.put("roA", formatPercent(metrics.get("roA")));
+            response.put("ocfToNetIncome", formatNumber(metrics.get("ocfToNetIncome")));
+
+            if (!quarters.isEmpty()) {
+                Quarter latest = quarters.get(0);
+                response.put("latestQuarterEnd", latest.getPeriodEnd().toString());
             }
-            ttmNetIncome += q.getNetIncomeLoss();
-            ttmRevenue += q.getRevenue();
-            counter += 1;
         }
 
-        Map<String, Object> response = Map.of(
-            "ticker", ticker,
-            "cik", asset.getCik().toString(),
-            "ttmNetIncome", String.format("%.2f",ttmNetIncome),
-            "ttmRevenue", String.format("%.2f",ttmRevenue)
-        );
         return ResponseEntity.ok(response);
     }
 
-    @GetMapping("/admin/quarters")
-    public String financials() throws Exception {
-        List<Asset> assets = assetRepository.findByIsFund(false);
-        //.stream()
-        //.filter(asset -> asset.getCik() == 320193L) // AAPL
-        //.collect(Collectors.toList());
-        List<String> snp500Tickers = webService.getSnP500List();
-        System.out.println(snp500Tickers);
-        List<String> errors = new ArrayList<String>();
-        for (Asset asset : assets) {
-            List<Listing> listings = listingRepository.findByAsset(asset);
-            boolean inSnP500 = false;
-            for (Listing l : listings) {
-                if (snp500Tickers.contains(l.getTicker())) {
-                    inSnP500 = true;
-                }
-            }
-            System.out.println(inSnP500);
-            if (inSnP500) {
-                Long cik = asset.getCik();
-                try {
-                    String json = null;
-                    json = webService.fetchFinancials(cik);
-                    JsonNode root = mapper.readTree(json);
-
-                    String[] accountingConcepts = {"NetIncomeLoss", "RevenueFromContractWithCustomerExcludingAssessedTax"};
-                    Map<LocalDate, Map<String, Long>> quarterData = getQuarterlyFacts(accountingConcepts, root);
-
-                    for (Map.Entry<LocalDate, Map<String, Long>> q : quarterData.entrySet()) {
-                        Map<String, Long> facts = q.getValue();
-                        Quarter quarter = new Quarter();
-                        quarter.setAsset(asset);
-                        quarter.setPeriodEnd(q.getKey());
-                        quarter.setNetIncomeLoss(facts.get("NetIncomeLoss"));
-                        quarter.setRevenue(facts.get("RevenueFromContractWithCustomerExcludingAssessedTax"));
-                        quarterService.createOrUpdateQuarter(quarter);
-                    }
-                }
-                catch (Exception e) {
-                    errors.add("cik:" + cik.toString() + " error: " + e.getMessage());
-                }
-            }
+    private String formatNumber(Object val) {
+        if (val == null)
+            return "0.00";
+        if (val instanceof Number) {
+            return String.format("%.2f", ((Number) val).doubleValue());
         }
-        return String.join("\n", errors) + "Maxwell";
-    }   
-
-    // private functions
-    private Map<LocalDate, Map<String, Long>> getQuarterlyFacts(String[] facts, JsonNode root) {
-        Map<LocalDate, Map<String, Long>> quarterData = new HashMap<>();
-        for (String fact : facts) {
-            JsonNode factsNode = root.get("facts").get("us-gaap").get(fact).get("units").get("USD");
-            Map<LocalDate, Long> quarters = new HashMap<>();
-            Map<Integer, Long> years = new HashMap<>();
-
-            // get a dict of dates: netIncome
-            for (JsonNode q : factsNode) {
-                if (q.get("frame") != null) {
-                    if (q.get("frame").asText().length() == 6) {
-                        years.put(Integer.parseInt(q.get("frame").asText().substring(2, 6)), q.get("val").asLong());
-                    }
-                    else if (q.get("frame") != null) {
-                        quarters.put(parseQuarter(q.get("frame").asText()), q.get("val").asLong());
-                    }
-                }
-            }
-            // check to ensure quarters is not empty
-            if (!quarters.isEmpty()) {
-                // fill in missing quarters, mainly those with 10-K not 10-Q
-                LocalDate period = Collections.min(quarters.keySet());
-                LocalDate lastPeriod = LocalDate.of(2025, 12, 31);
-                while (period.isBefore(lastPeriod)) {
-                    if (quarters.get(period) == null) {
-                        Long quarterFact = years.get(period.getYear());
-                        if (quarterFact != null) {
-                            List<LocalDate> last3Quarters = getLast3Quarters(period);
-                            for (LocalDate q : last3Quarters) {
-                                if (quarters.get(q) == null) {
-                                    break;
-                                }
-                                quarterFact -= quarters.get(q);
-                            }
-                            quarters.put(period, quarterFact);
-                        }
-                    }
-                    period = nextQuarter(period);
-                }
-                for (Map.Entry<LocalDate, Long> q : quarters.entrySet()) {
-                    LocalDate quarterEnd = q.getKey();
-                    if (quarterData.get(quarterEnd) == null) {
-                        quarterData.put(quarterEnd, new HashMap<>());
-                    }
-                    Map<String, Long> currentQuarter = quarterData.get(quarterEnd);
-                    currentQuarter.put(fact, q.getValue());
-                }
-            }
-        }
-        return quarterData;
+        return val.toString();
     }
-}
 
+    private String formatPercent(Object val) {
+        if (val == null)
+            return "N/A";
+        return String.format("%.2f%%", (Double) val * 100);
+    }
+
+    @GetMapping("/admin/quarters")
+    public String financials() {
+        List<String> snp500Tickers = webService.getSnP500List();
+        List<Asset> assets = assetRepository.findByTickersIn(snp500Tickers);
+        List<String> errors = Collections.synchronizedList(new ArrayList<String>());
+
+        assets.parallelStream().forEach(asset -> {
+            try {
+                edgarService.updateFinancials(asset);
+            } catch (Exception e) {
+                errors.add("cik:" + asset.getCik() + " error: " + e.getMessage());
+            }
+        });
+        return errors.isEmpty() ? "Success" : String.join("\n", errors);
+    }
+
+}
