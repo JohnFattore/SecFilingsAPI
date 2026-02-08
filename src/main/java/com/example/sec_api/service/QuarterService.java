@@ -25,6 +25,25 @@ public class QuarterService {
     }
 
     public Quarter createOrUpdateQuarter(Quarter quarter) {
+        if (quarter.getYear() != null && quarter.getQuarter() != null) {
+            return quarterRepository.findByAssetAndYearAndQuarter(quarter.getAsset(), quarter.getYear(),
+                    quarter.getQuarter())
+                    .map(existing -> {
+                        updateQuarterFields(existing, quarter);
+                        return quarterRepository.save(existing);
+                    })
+                    .orElseGet(() -> {
+                        // secondary check by dates if year/quarter lookup failed
+                        return quarterRepository.findByAssetAndPeriodStartAndPeriodEnd(quarter.getAsset(),
+                                quarter.getPeriodStart(), quarter.getPeriodEnd())
+                                .map(existing -> {
+                                    updateQuarterFields(existing, quarter);
+                                    return quarterRepository.save(existing);
+                                })
+                                .orElseGet(() -> quarterRepository.save(quarter));
+                    });
+        }
+
         if (quarter.getPeriodStart() != null && quarter.getPeriodEnd() != null) {
             return quarterRepository
                     .findByAssetAndPeriodStartAndPeriodEnd(quarter.getAsset(), quarter.getPeriodStart(),
@@ -76,32 +95,44 @@ public class QuarterService {
             existing.setPeriodStart(source.getPeriodStart());
         if (source.getPeriodEnd() != null)
             existing.setPeriodEnd(source.getPeriodEnd());
+        if (source.getYear() != null)
+            existing.setYear(source.getYear());
+        if (source.getQuarter() != null)
+            existing.setQuarter(source.getQuarter());
 
+        if (source.getRevenues() != null)
+            existing.setRevenues(source.getRevenues());
         if (source.getNetIncomeLoss() != null)
             existing.setNetIncomeLoss(source.getNetIncomeLoss());
-        if (source.getRevenue() != null)
-            existing.setRevenue(source.getRevenue());
-        if (source.getCostOfRevenue() != null)
-            existing.setCostOfRevenue(source.getCostOfRevenue());
+        if (source.getOperatingIncomeLoss() != null)
+            existing.setOperatingIncomeLoss(source.getOperatingIncomeLoss());
         if (source.getGrossProfit() != null)
             existing.setGrossProfit(source.getGrossProfit());
-        if (source.getOperatingIncome() != null)
-            existing.setOperatingIncome(source.getOperatingIncome());
+        if (source.getEarningsPerShareBasic() != null)
+            existing.setEarningsPerShareBasic(source.getEarningsPerShareBasic());
+        if (source.getEarningsPerShareDiluted() != null)
+            existing.setEarningsPerShareDiluted(source.getEarningsPerShareDiluted());
+
         if (source.getAssets() != null)
             existing.setAssets(source.getAssets());
         if (source.getLiabilities() != null)
             existing.setLiabilities(source.getLiabilities());
-        if (source.getEquity() != null)
-            existing.setEquity(source.getEquity());
-        if (source.getLongTermDebt() != null)
-            existing.setLongTermDebt(source.getLongTermDebt());
-        if (source.getInventory() != null)
-            existing.setInventory(source.getInventory());
-        if (source.getOperatingCashFlow() != null)
-            existing.setOperatingCashFlow(source.getOperatingCashFlow());
-        if (source.getCash() != null)
-            existing.setCash(source.getCash());
-        if (source.getEpsBasic() != null)
-            existing.setEpsBasic(source.getEpsBasic());
+        if (source.getStockholdersEquity() != null)
+            existing.setStockholdersEquity(source.getStockholdersEquity());
+        if (source.getCashAndCashEquivalentsAtCarryingValue() != null)
+            existing.setCashAndCashEquivalentsAtCarryingValue(source.getCashAndCashEquivalentsAtCarryingValue());
+        if (source.getAccountsReceivableNetCurrent() != null)
+            existing.setAccountsReceivableNetCurrent(source.getAccountsReceivableNetCurrent());
+        if (source.getInventoryNet() != null)
+            existing.setInventoryNet(source.getInventoryNet());
+
+        if (source.getNetCashProvidedByUsedInOperatingActivities() != null)
+            existing
+                    .setNetCashProvidedByUsedInOperatingActivities(
+                            source.getNetCashProvidedByUsedInOperatingActivities());
+        if (source.getPaymentsOfDividends() != null)
+            existing.setPaymentsOfDividends(source.getPaymentsOfDividends());
+        if (source.getPaymentsForRepurchaseOfCommonStock() != null)
+            existing.setPaymentsForRepurchaseOfCommonStock(source.getPaymentsForRepurchaseOfCommonStock());
     }
 }

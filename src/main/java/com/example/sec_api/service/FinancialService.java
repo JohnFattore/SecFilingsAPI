@@ -22,7 +22,6 @@ public class FinancialService {
         double currentTTMNetIncome = calculateTTMNetIncome(quarters, 0);
         double currentTTMRevenue = calculateTTMRevenue(quarters, 0);
         double currentTTMOCF = calculateTTMOperatingCashFlow(quarters, 0);
-        double currentTTMCostOfRevenue = calculateTTMCostOfRevenue(quarters, 0);
         double currentTTMGrossProfit = calculateTTMGrossProfit(quarters, 0);
         double currentTTMOperatingIncome = calculateTTMOperatingIncome(quarters, 0);
 
@@ -33,7 +32,6 @@ public class FinancialService {
         metrics.put("ttmNetIncome", currentTTMNetIncome);
         metrics.put("ttmRevenue", currentTTMRevenue);
         metrics.put("ttmOperatingCashFlow", currentTTMOCF);
-        metrics.put("ttmCostOfRevenue", currentTTMCostOfRevenue);
         metrics.put("ttmGrossProfit", currentTTMGrossProfit);
         metrics.put("ttmOperatingIncome", currentTTMOperatingIncome);
 
@@ -44,11 +42,10 @@ public class FinancialService {
         Quarter latest = quarters.get(0);
         metrics.put("latestAssets", latest.getAssets());
         metrics.put("latestLiabilities", latest.getLiabilities());
-        metrics.put("latestEquity", latest.getEquity());
-        metrics.put("latestLongTermDebt", latest.getLongTermDebt());
-        metrics.put("latestInventory", latest.getInventory());
-        metrics.put("latestCash", latest.getCash());
-        metrics.put("latestEps", latest.getEpsBasic());
+        metrics.put("latestEquity", latest.getStockholdersEquity());
+        metrics.put("latestInventory", latest.getInventoryNet());
+        metrics.put("latestCash", latest.getCashAndCashEquivalentsAtCarryingValue());
+        metrics.put("latestEps", latest.getEarningsPerShareBasic());
 
         // Ratios
         if (currentTTMRevenue != 0) {
@@ -64,7 +61,9 @@ public class FinancialService {
 
         if (latest.getLiabilities() != null && latest.getLiabilities() != 0) {
             metrics.put("cashToLiabilities",
-                    (latest.getCash() != null ? latest.getCash().doubleValue() : 0.0) / latest.getLiabilities());
+                    (latest.getCashAndCashEquivalentsAtCarryingValue() != null
+                            ? latest.getCashAndCashEquivalentsAtCarryingValue().doubleValue()
+                            : 0.0) / latest.getLiabilities());
         }
 
         if (currentTTMNetIncome != 0) {
@@ -87,7 +86,7 @@ public class FinancialService {
         if (quarters.size() < offset + 4)
             return 0.0;
         return quarters.subList(offset, offset + 4).stream()
-                .mapToLong(q -> q.getRevenue() != null ? q.getRevenue() : 0L)
+                .mapToLong(q -> q.getRevenues() != null ? q.getRevenues() : 0L)
                 .sum();
     }
 
@@ -95,15 +94,9 @@ public class FinancialService {
         if (quarters.size() < offset + 4)
             return 0.0;
         return quarters.subList(offset, offset + 4).stream()
-                .mapToLong(q -> q.getOperatingCashFlow() != null ? q.getOperatingCashFlow() : 0L)
-                .sum();
-    }
-
-    public double calculateTTMCostOfRevenue(List<Quarter> quarters, int offset) {
-        if (quarters.size() < offset + 4)
-            return 0.0;
-        return quarters.subList(offset, offset + 4).stream()
-                .mapToLong(q -> q.getCostOfRevenue() != null ? q.getCostOfRevenue() : 0L)
+                .mapToLong(q -> q.getNetCashProvidedByUsedInOperatingActivities() != null
+                        ? q.getNetCashProvidedByUsedInOperatingActivities()
+                        : 0L)
                 .sum();
     }
 
@@ -119,7 +112,7 @@ public class FinancialService {
         if (quarters.size() < offset + 4)
             return 0.0;
         return quarters.subList(offset, offset + 4).stream()
-                .mapToLong(q -> q.getOperatingIncome() != null ? q.getOperatingIncome() : 0L)
+                .mapToLong(q -> q.getOperatingIncomeLoss() != null ? q.getOperatingIncomeLoss() : 0L)
                 .sum();
     }
 

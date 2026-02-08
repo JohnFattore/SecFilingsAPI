@@ -10,5 +10,7 @@ import java.util.Optional;
 public interface QuarterRepository extends JpaRepository<Quarter, Long> {
     Optional<Quarter> findByAssetAndPeriodStartAndPeriodEnd(Asset asset, LocalDate periodStart, LocalDate periodEnd);
 
+    Optional<Quarter> findByAssetAndYearAndQuarter(Asset asset, Integer year, Integer quarter);
+
     List<Quarter> findByAsset(Asset asset);
 }

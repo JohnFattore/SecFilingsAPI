@@ -15,31 +15,30 @@ public class Quarter {
 
     private LocalDate periodStart;
 
+    private Integer year;
+
+    private Integer quarter;
+
+    // Income Statement
+    private Long revenues;
     private Long netIncomeLoss;
-
-    private Long revenue;
-
-    private Long assets;
-
-    private Long liabilities;
-
-    private Long operatingCashFlow;
-
-    private Long cash;
-
-    private Double epsBasic;
-
-    private Long costOfRevenue;
-
+    private Long operatingIncomeLoss;
     private Long grossProfit;
+    private Double earningsPerShareBasic;
+    private Double earningsPerShareDiluted;
 
-    private Long operatingIncome;
+    // Balance Sheet
+    private Long assets;
+    private Long liabilities;
+    private Long stockholdersEquity;
+    private Long cashAndCashEquivalentsAtCarryingValue;
+    private Long accountsReceivableNetCurrent;
+    private Long inventoryNet;
 
-    private Long equity;
-
-    private Long longTermDebt;
-
-    private Long inventory;
+    // Cash Flow
+    private Long netCashProvidedByUsedInOperatingActivities;
+    private Long paymentsOfDividends;
+    private Long paymentsForRepurchaseOfCommonStock;
 
     @ManyToOne
     @JoinColumn(name = "asset_id")
@@ -70,6 +69,30 @@ public class Quarter {
         this.periodStart = periodStart;
     }
 
+    public Integer getYear() {
+        return year;
+    }
+
+    public void setYear(Integer year) {
+        this.year = year;
+    }
+
+    public Integer getQuarter() {
+        return quarter;
+    }
+
+    public void setQuarter(Integer quarter) {
+        this.quarter = quarter;
+    }
+
+    public Long getRevenues() {
+        return revenues;
+    }
+
+    public void setRevenues(Long revenues) {
+        this.revenues = revenues;
+    }
+
     public Long getNetIncomeLoss() {
         return netIncomeLoss;
     }
@@ -78,12 +101,36 @@ public class Quarter {
         this.netIncomeLoss = netIncomeLoss;
     }
 
-    public Long getRevenue() {
-        return revenue;
+    public Long getOperatingIncomeLoss() {
+        return operatingIncomeLoss;
     }
 
-    public void setRevenue(Long revenue) {
-        this.revenue = revenue;
+    public void setOperatingIncomeLoss(Long operatingIncomeLoss) {
+        this.operatingIncomeLoss = operatingIncomeLoss;
+    }
+
+    public Long getGrossProfit() {
+        return grossProfit;
+    }
+
+    public void setGrossProfit(Long grossProfit) {
+        this.grossProfit = grossProfit;
+    }
+
+    public Double getEarningsPerShareBasic() {
+        return earningsPerShareBasic;
+    }
+
+    public void setEarningsPerShareBasic(Double earningsPerShareBasic) {
+        this.earningsPerShareBasic = earningsPerShareBasic;
+    }
+
+    public Double getEarningsPerShareDiluted() {
+        return earningsPerShareDiluted;
+    }
+
+    public void setEarningsPerShareDiluted(Double earningsPerShareDiluted) {
+        this.earningsPerShareDiluted = earningsPerShareDiluted;
     }
 
     public Long getAssets() {
@@ -102,83 +149,67 @@ public class Quarter {
         this.liabilities = liabilities;
     }
 
+    public Long getStockholdersEquity() {
+        return stockholdersEquity;
+    }
+
+    public void setStockholdersEquity(Long stockholdersEquity) {
+        this.stockholdersEquity = stockholdersEquity;
+    }
+
+    public Long getCashAndCashEquivalentsAtCarryingValue() {
+        return cashAndCashEquivalentsAtCarryingValue;
+    }
+
+    public void setCashAndCashEquivalentsAtCarryingValue(Long cashAndCashEquivalentsAtCarryingValue) {
+        this.cashAndCashEquivalentsAtCarryingValue = cashAndCashEquivalentsAtCarryingValue;
+    }
+
+    public Long getAccountsReceivableNetCurrent() {
+        return accountsReceivableNetCurrent;
+    }
+
+    public void setAccountsReceivableNetCurrent(Long accountsReceivableNetCurrent) {
+        this.accountsReceivableNetCurrent = accountsReceivableNetCurrent;
+    }
+
+    public Long getInventoryNet() {
+        return inventoryNet;
+    }
+
+    public void setInventoryNet(Long inventoryNet) {
+        this.inventoryNet = inventoryNet;
+    }
+
+    public Long getNetCashProvidedByUsedInOperatingActivities() {
+        return netCashProvidedByUsedInOperatingActivities;
+    }
+
+    public void setNetCashProvidedByUsedInOperatingActivities(Long netCashProvidedByUsedInOperatingActivities) {
+        this.netCashProvidedByUsedInOperatingActivities = netCashProvidedByUsedInOperatingActivities;
+    }
+
+    public Long getPaymentsOfDividends() {
+        return paymentsOfDividends;
+    }
+
+    public void setPaymentsOfDividends(Long paymentsOfDividends) {
+        this.paymentsOfDividends = paymentsOfDividends;
+    }
+
+    public Long getPaymentsForRepurchaseOfCommonStock() {
+        return paymentsForRepurchaseOfCommonStock;
+    }
+
+    public void setPaymentsForRepurchaseOfCommonStock(Long paymentsForRepurchaseOfCommonStock) {
+        this.paymentsForRepurchaseOfCommonStock = paymentsForRepurchaseOfCommonStock;
+    }
+
     public Asset getAsset() {
         return asset;
     }
 
     public void setAsset(Asset asset) {
         this.asset = asset;
-    }
-
-    public Long getOperatingCashFlow() {
-        return operatingCashFlow;
-    }
-
-    public void setOperatingCashFlow(Long operatingCashFlow) {
-        this.operatingCashFlow = operatingCashFlow;
-    }
-
-    public Long getCash() {
-        return cash;
-    }
-
-    public void setCash(Long cash) {
-        this.cash = cash;
-    }
-
-    public Double getEpsBasic() {
-        return epsBasic;
-    }
-
-    public void setEpsBasic(Double epsBasic) {
-        this.epsBasic = epsBasic;
-    }
-
-    public Long getCostOfRevenue() {
-        return costOfRevenue;
-    }
-
-    public void setCostOfRevenue(Long costOfRevenue) {
-        this.costOfRevenue = costOfRevenue;
-    }
-
-    public Long getGrossProfit() {
-        return grossProfit;
-    }
-
-    public void setGrossProfit(Long grossProfit) {
-        this.grossProfit = grossProfit;
-    }
-
-    public Long getOperatingIncome() {
-        return operatingIncome;
-    }
-
-    public void setOperatingIncome(Long operatingIncome) {
-        this.operatingIncome = operatingIncome;
-    }
-
-    public Long getEquity() {
-        return equity;
-    }
-
-    public void setEquity(Long equity) {
-        this.equity = equity;
-    }
-
-    public Long getLongTermDebt() {
-        return longTermDebt;
-    }
-
-    public void setLongTermDebt(Long longTermDebt) {
-        this.longTermDebt = longTermDebt;
-    }
-
-    public Long getInventory() {
-        return inventory;
-    }
-
-    public void setInventory(Long inventory) {
-        this.inventory = inventory;
     }
 }

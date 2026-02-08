@@ -116,28 +116,46 @@ public class MainController {
     @GetMapping("/quarters")
     public ResponseEntity quarters(@RequestParam String ticker) {
         Asset asset = assetRepository.findByListings_Ticker(ticker);
-        List<Quarter> quarters = quarterRepository.findByAsset(asset);
         if (asset == null) {
             return ResponseEntity.notFound().build();
         }
+        List<Quarter> quarters = quarterRepository.findByAsset(asset);
         List<Map<String, Object>> quarterOutput = new ArrayList<>();
         for (Quarter q : quarters) {
-            Map<String, Object> quarterMap = new HashMap<>();
-            quarterMap.put("periodEnd", q.getPeriodEnd());
-            quarterMap.put("netIncome", q.getNetIncomeLoss());
-            quarterOutput.add(quarterMap);
+            Map<String, Object> qm = new HashMap<>();
+            qm.put("year", q.getYear());
+            qm.put("quarter", q.getQuarter());
+            qm.put("periodStart", q.getPeriodStart());
+            qm.put("periodEnd", q.getPeriodEnd());
+
+            // Income Statement
+            qm.put("revenues", q.getRevenues());
+            qm.put("netIncomeLoss", q.getNetIncomeLoss());
+            qm.put("operatingIncomeLoss", q.getOperatingIncomeLoss());
+            qm.put("grossProfit", q.getGrossProfit());
+            qm.put("epsBasic", q.getEarningsPerShareBasic());
+            qm.put("epsDiluted", q.getEarningsPerShareDiluted());
+
+            // Balance Sheet
+            qm.put("assets", q.getAssets());
+            qm.put("liabilities", q.getLiabilities());
+            qm.put("equity", q.getStockholdersEquity());
+            qm.put("cash", q.getCashAndCashEquivalentsAtCarryingValue());
+            qm.put("receivables", q.getAccountsReceivableNetCurrent());
+            qm.put("inventory", q.getInventoryNet());
+
+            // Cash Flow
+            qm.put("ocf", q.getNetCashProvidedByUsedInOperatingActivities());
+            qm.put("dividends", q.getPaymentsOfDividends());
+            qm.put("buybacks", q.getPaymentsForRepurchaseOfCommonStock());
+
+            quarterOutput.add(qm);
         }
         Map<String, Object> response = Map.of(
                 "ticker", ticker,
                 "cik", asset.getCik().toString(),
                 "quarters", quarterOutput);
         return ResponseEntity.ok(response);
-    }
-
-    @GetMapping("/test2")
-    public ResponseEntity test2() throws Exception {
-        webService.getSnP500List();
-        return ResponseEntity.ok("MAXWELL");
     }
 
     @GetMapping("/company-fact-sheet")
@@ -159,7 +177,6 @@ public class MainController {
             response.put("ttmOperatingCashFlow", formatNumber(metrics.get("ttmOperatingCashFlow")));
             response.put("ttmOperatingIncome", formatNumber(metrics.get("ttmOperatingIncome")));
             response.put("ttmGrossProfit", formatNumber(metrics.get("ttmGrossProfit")));
-            response.put("ttmCostOfRevenue", formatNumber(metrics.get("ttmCostOfRevenue")));
 
             response.put("ttmNetIncomeYoY", formatPercent(metrics.get("ttmNetIncomeYoY")));
             response.put("ttmRevenueYoY", formatPercent(metrics.get("ttmRevenueYoY")));
@@ -168,10 +185,8 @@ public class MainController {
             response.put("latestAssets", formatNumber(metrics.get("latestAssets")));
             response.put("latestLiabilities", formatNumber(metrics.get("latestLiabilities")));
             response.put("latestEquity", formatNumber(metrics.get("latestEquity")));
-            response.put("latestLongTermDebt", formatNumber(metrics.get("latestLongTermDebt")));
             response.put("latestInventory", formatNumber(metrics.get("latestInventory")));
             response.put("latestCash", formatNumber(metrics.get("latestCash")));
-            response.put("latestShares", formatNumber(metrics.get("latestShares")));
             response.put("latestEps", formatNumber(metrics.get("latestEps")));
 
             // Ratios
@@ -220,6 +235,28 @@ public class MainController {
             }
         });
         return errors.isEmpty() ? "Success" : String.join("\n", errors);
+    }
+
+    @GetMapping("/admin/sync-frames")
+    public ResponseEntity syncFrames(@RequestParam(required = false) String period,
+            @RequestParam(required = false) Integer year,
+            @RequestParam(required = false, defaultValue = "false") boolean full) {
+        try {
+            if (full) {
+                edgarService.syncSnp500FramesFull();
+                return ResponseEntity.ok("Syncing all frames since 2009. This may take a while.");
+            } else if (period != null) {
+                edgarService.syncSnp500Frames(period);
+                return ResponseEntity.ok("Syncing frames for period: " + period);
+            } else if (year != null) {
+                edgarService.syncSnp500FramesByYear(year);
+                return ResponseEntity.ok("Syncing frames for year: " + year);
+            } else {
+                return ResponseEntity.badRequest().body("Either period, year, or full=true must be provided");
+            }
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError().body("Error syncing frames: " + e.getMessage());
+        }
     }
 
 }
